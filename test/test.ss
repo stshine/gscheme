@@ -1,1 +1,7 @@
-((lambda (x y) (+ x y))  23 34 )
+(define factor
+  (lambda (x)
+    (cond
+     ((zero? (- x 1)) 1)
+     (else (* x (factor (- x 1)))))))
+
+(factor 4)
