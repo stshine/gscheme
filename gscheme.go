@@ -326,20 +326,6 @@ func cons(args []interface{}) []interface{} {
 	return newlist
 }
 
-func cond(args []interface{}) interface{} {
-	for _,value := range args {
-		seg,_ := value.([]interface{})
-		if test,ok := seg[0].(Bool); ok && test == True {
-			return seg[1]
-		} else {
-			if Else,ok := seg[0].(Symbol); ok && (Symbol{"else"} == Else) {
-			return seg[1]
-			}
-		}
-	}
-	return Nil{"nil"}
-}
-
 func eqf(args []interface{}) Bool {
 	if reflect.DeepEqual(args[0], args[1]) {
 		return True
