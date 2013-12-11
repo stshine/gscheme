@@ -56,35 +56,70 @@ func (e *Env) Bind(k Symbol, v interface{}) {
 	return
 }
 
+type Node interface {
+}
+
+type Atom interface {
+	String() string
+}
+
+type Expr struct {
+	value []Node
+}
+
+func (e *Expr) Append(node Node) {
+	e.value = append(e.value, node)
+}
+
 type Number struct {
 	value int
 }
 
+func (n Number) String() string {
+	return string(n.value)
+}
+
 type Symbol struct {
-	value string
+	name string
+	value Node
+}
+
+func (s Symbol) String() string {
+	return s.value
 }
 
 type String struct {
 	value string
 }
 
+func (s String) String() string {
+	return s.value
+}
+
+
 type Func struct {
-	node []interface{}
+	value Expr
 }
 
 type Bool struct {
 	value bool
 }
 
-type Nil struct {
-	value string
+func (b Bool) String() string {
+	if b.value == true {
+		return "true"
+	} else {
+		return "false"
+	}
 }
+
+
+var Nil Symbol = Symbol{"nil"}
 
 var True Bool = Bool{true}
 
 var False Bool = Bool{false}
 
-var index int = 0
 
 func newParser(content string) Parser {
 	var tokens []string
@@ -131,6 +166,20 @@ type Parser struct {
 	index  int
 }
 
+func (p *Parser) Parse() []Node {
+	var nodes []Node
+	for token := p.GetToken(); token != "" {
+		if token == ")" {
+			log.Fatal("Syntax error!")
+		} else if token != "(" {
+			nodes = append(nodes, getAtom(token))
+		} else {
+			nodes = append(nodes, p.getList())
+		}
+	}
+	return nodes
+}
+
 func (p *Parser) GetToken() string {
 	var token string
 	if p.index == len(p.Tokens) {
@@ -149,35 +198,49 @@ func (p *Parser) UngetToken() {
 	return
 }
 
-func (p *Parser) Parse() []interface{} {
-	var node []interface{}
+
+func (p *Parser) getList() Expr {
+	var list Expr
 	var token string
-	digits,_ := regexp.Compile("[0-9]+")
-	strings,_ := regexp.Compile("\".*\"")
+
 Loop:
 	for {
 		token = p.GetToken()
-		switch {
-		case token == "" : break Loop 
-		case token == "(" : {
-			result := p.Parse()
-			node = append(node, result)
-		}
-		case token == ")" : return node
-		case token == "#t": node = append(node, True)
-		case token == "#f": node = append(node, False)
-		case digits.MatchString(token): {
-			n,err := strconv.Atoi(token)
-			checkErr(err)
-			node = append(node, Number{n})
-		}
-		case strings.MatchString(token): {
-			node = append(node,String{token})
-		}
-		default: node = append(node, Symbol{token})
+		if token == "" : {
+			log.Fatal("Syntax error!")
+		} else if token == ")": {
+			break Loop 
+		} else if token != "(" {
+			result := getAtom(token)
+			list.Append(result)
+		} else {
+			result = p.getList
+			list.Append(result)
 		}
 	}
-	return node
+	return list
+}
+
+func getAtom(token string) Node {
+	var result Node
+	digits,_ := regexp.Compile("\d+")
+	strings,_ := regexp.Compile("\".*\"")
+	
+	switch {
+	case token == "#t": result = True
+	case token == "#f": result = False
+	case digits.MatchString(token): {
+		n,err := strconv.Atoi(token)
+		checkErr(err)
+		result = Number{n}
+	}
+	case strings.MatchString(token): {
+		result = String{token}
+	}
+	default: result = Symbol{token}
+	}
+	
+	return result
 }
 
 func eval(content string) {
@@ -192,7 +255,7 @@ func eval(content string) {
 	}
 }
 
-func doEval(node interface{}, env Env) interface{} {
+func doEval(node Node, env Env) Node {
  	fmt.Println("Start Eval:", node)
 //	fmt.Println(env)
  	var result interface{}
